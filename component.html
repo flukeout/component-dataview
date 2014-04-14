@@ -1,7 +1,7 @@
-<polymer-element name="ceci-dataview" showdelete="true" showedit="true" attributes="showaddtoitem listschemanew listschema showkey dataname datascope showedit showdelete" dataname="Items" extends="ceci-element">
+<polymer-element name="ceci-dataview" showdelete="true" showedit="true" showconfig="true" attributes="showconfig showaddtoitem keyconfig listschema showkey dataname datascope showedit showdelete" dataname="Items" extends="ceci-element">
 <template>
   <link rel="stylesheet" href="component.css">
-  <div id="keys-wrapper" >
+  <div id="keys-wrapper">
     <div id="keys"></div>
   </div>
   <div id="items"></div>
@@ -12,59 +12,71 @@
     "description": "Display any data you have created using forms made with addform component.",
     "broadcasts": {
       "editItem": {
-        "label": "Send Item",
-          "description": "Broadcasts a reference to the record when the 'Edit' button is tapped."
+        "label": "Tap 'Edit' Button",
+        "description": "Broadcasts a reference to the record when the 'Edit' button is tapped."
       },
       "addToItem": {
         "description": "Broadcasts a reference to the record when the 'Add to' button is tapped.",
-          "label": "Add to Item"
+        "label": "Add to Item"
       },
-      "sendItem": {
+      "tapItem": {
         "description": "Broadcasts a reference to the record when it is tapped.",
-        "label": "View Item"
+        "label": "Tap Item"
       }
     },
     "listeners": {
       "showItem": {
         "description": "Shows the data for this record.",
-          "label": "Show item"
+        "label": "Show item"
       }
     },
     "attributes": {
       "dataname": {
         "description": "Will try to show this kind of item in the saved data, i.e. 'Cats'",
-          "label": "I show...",
-          "editable": "text"
+        "label": "I show...",
+        "editable": "text"
+      },
+      "showconfig": {
+        "description": "Toggles the view configuration.",
+        "label": "Show config",
+        "editable": "boolean"
       },
       "showdelete": {
         "description": "Hides or shows the delete icon for each record.",
-        "label": "Show Delete Link",
-          "editable": "boolean"
-        },
-        "showedit": {
-          "description": "Show 'Edit' button",
-          "label": "Hides or shows the Edit button for each record.",
-          "editable": "boolean"
-        },
-        "showaddtoitem": {
-          "description": "Show 'Add To' Button",
-          "label": "Hides or shows the 'Add to This' button",
-          "editable": "boolean"
-        }
+        "label": "Show 'Delete' button",
+        "editable": "boolean"
+      },
+      "showedit": {
+        "description": "Show 'Edit' button",
+        "label": "Hides or shows the Edit button for each record.",
+        "editable": "boolean"
+      },
+      "showaddtoitem": {
+        "description": "Show 'Add To' button",
+        "label": "Hides or shows the 'Add to This' button",
+        "editable": "boolean"
+      }
     }
   }
   </script>
 </template>
-<tags>data</tags>
 <script>
 Polymer("ceci-dataview", {
-  keyConfig: {},
   storedData : {},
+  viewMode : "list",
+  keyconfig : [],
   dataChangedEvent : new CustomEvent("storage"),
   ready: function(){
     this.super();
     this.datascope = [];
     // this.$.configureView.innerHTML = this.gettext(this.localName + "/configureView") || this.$.configureView.innerHTML;
+  },
+  showconfigChanged : function(){
+    if(this.showconfig == "true") {
+      this.shadowRoot.querySelector("#keys-wrapper").style.display = "block";
+    } else {
+      this.shadowRoot.querySelector("#keys-wrapper").style.display = "none";
+    }
   },
   showdeleteChanged : function(oldValue,newValue){
     this.showData();
@@ -76,11 +88,12 @@ Polymer("ceci-dataview", {
     this.showData();
   },
   datanameChanged : function (oldValue, newValue) {
-    this.updateKeyUI();
-    this.showData();
+    // this.updateKeyUI();
+    // this.showData();
   },
-  showItem: function(e){
+  showItem: function(e,b){
     this.datascope = e;
+    this.viewMode = "single";
   },
   datascopeChanged: function(){
     // If we want to indicate the scope of the data that is shown, there is where we'd do it.
@@ -106,12 +119,28 @@ Polymer("ceci-dataview", {
     var ca = document.querySelector("ceci-app")
     ca.getFirebaseObject('form-data', "", function(data){
       self.storedData = data || {};
-      for (var i = 0; i < self.datascope.length; i++){
-        var scopeItem = self.datascope[i];
-        self.storedData = self.storedData[scopeItem["dataset"]][scopeItem["index"]];
+      var lastcollection;
+
+      if(self.datascope.length > 0) {
+
+        for (var i = 0; i < self.datascope.length; i++){
+          var scopeItem = self.datascope[i];
+          lastcollection = self.storedData[scopeItem["dataset"]];
+          self.storedData = self.storedData[scopeItem["dataset"]][scopeItem["index"]];
+
+        }
+
+        lastcollection.splice(id,1);
+        // delete self.storedData;// this gets down to the actual object;
+        //blam blam blam
+
+      } else {
+        // without a datascope
+        self.storedData = self.storedData[self.dataname] || [];
+        self.storedData.splice(id, 1); // Does not have it huh?
       }
-      self.storedData = self.storedData[self.dataname] || [];
-      self.storedData.splice(id, 1);
+
+
       ca.setFirebaseObject('form-data', data);
       window.dispatchEvent(self.dataChangedEvent);
     });
@@ -134,10 +163,10 @@ Polymer("ceci-dataview", {
     }
   },
   _updateKeyUIFirebase : function(){
-
+    console.log("updateKeyUI");
     //This builds the UI that lets you choose how each key in the data set is displayed!
-    var self = this;
 
+    var self = this;
     document.querySelector("ceci-app").getFirebaseObject('form-data',"", function(data){
 
       // Clears out the old UI
@@ -147,8 +176,12 @@ Polymer("ceci-dataview", {
       var db = data || {};
       self.storedData = db[self.dataname] || [];
 
-      // Tries to grab it's own keyConfig (which tells it how to render each Key field)
-      self.keyConfig = JSON.parse(self.listschema) || [];
+      //Gets the list schema from the db
+      // self.keyConfig = db[self.dataname + "_listschema"] || {};
+
+      if(typeof self.keyconfig == "string") {
+        self.keyconfig = JSON.parse(self.keyconfig);
+      }
 
       // Grabs the schema from the form
       var formSchema = db[self.dataname + "_formschema"] || {};
@@ -181,28 +214,29 @@ Polymer("ceci-dataview", {
 
         // check if it's in the key config'
         var found = false;
-        for(var l = 0; l < self.keyConfig.length; l++) {
-          var item = self.keyConfig[l];
+
+        for(var l = 0; l < self.keyconfig.length; l++) {
+          var item = self.keyconfig[l];
           if(item.name == key) {
             found = true;
           }
         }
         if(found == false) {
-          self.keyConfig.push({"name":key,"type":"ceci-form-text-input"});
+          self.keyconfig.push({"name":key,"type":"ceci-form-text-input","attributes" : []});
         }
       }
 
       // Clean up the keyConfig
-      for(var j = 0; j < self.keyConfig.length; j ++){
-        var keyName = self.keyConfig[j].name;
+      for(var j = 0; j < self.keyconfig.length; j ++){
+        var keyName = self.keyconfig[j].name;
         if(keylist.indexOf(keyName) < 0){
-          self.keyConfig.splice(j,1);
+          self.keyconfig.splice(j,1);
         }
       }
 
-      for(var j = 0; j < self.keyConfig.length; j ++){
+      for(var j = 0; j < self.keyconfig.length; j ++){
 
-        var keyName = self.keyConfig[j].name;
+        var keyName = self.keyconfig[j].name;
 
         var keyConfigEl = document.createElement("div");
         keyConfigEl.classList.add("keyConfig");
@@ -211,27 +245,50 @@ Polymer("ceci-dataview", {
         var select =  document.createElement("select");
         keyConfigEl.appendChild(select);
 
-        select.setAttribute("key",self.keyConfig[j].name);
-        select.innerHTML = "<option value='ceci-textbox'>Text</option><option value='ceci-form-text-input'>Text Input</option><option value='ceci-form-checkbox'>Checkbox</option><option value='ceci-form-range'>Slider</option><option value='ceci-stars-component'>Stars</option><option value='hide'>Hide</option>";
+        select.setAttribute("key",self.keyconfig[j].name);
+        select.innerHTML = "<option value='ceci-textbox'>Text</option><option value='ceci-form-text-input'>Text Input</option><option value='ceci-form-checkbox'>Checkbox</option><option value='ceci-form-range'>Slider</option><option value='ceci-stars-component'>Stars</option><option value='ceci-image'>Image</option><option value='hide'>Hide</option>";
 
-        select.value = self.keyConfig[j].type;
+        var elementType = self.keyconfig[j].type;
+
+        select.value = elementType;
+
+        var displayElement = document.createElement(elementType);
+
+        var componentTemplate = document.createElement("div");
+        componentTemplate.classList.add("component-template");
+
+        componentTemplate.appendChild(displayElement);
+
+        var attribs = self.keyconfig[j].attributes;
+
+        for(var k = 0; k < attribs.length; k++) {
+          displayElement.setAttribute(attribs[k].attribute,attribs[k].value);
+        }
+
+        keyConfigEl.appendChild(componentTemplate);
 
         select.addEventListener("change",function(e){
-          self.changeKeyOrder();
-          self.listschema = JSON.stringify(self.keyConfig); // This is supposed to save the list schema
+          self.updateSchema();
+          self.updateKeyUI();
+          self.showData();
         });
 
         self.shadowRoot.querySelector("#keys").appendChild(keyConfigEl);
+
+        var MutationObserver = window.MutationObserver || window.WebKitMutationObserver || window.MozMutationObserver;
+
+        //Updates the
+        var observer = new MutationObserver(function(mutations) {
+          self.updateSchema();
+          self.showData();
+        });
+
+        observer.observe(displayElement, {
+          attributes: true,
+          childList: false,
+          characterData: false
+        });
       }
-
-      self.listschema = JSON.stringify(self.keyConfig); //Need to keep track of this
-
-      //Put the list schema into the db
-      db[self.dataname + "_listschema"] = self.keyConfig;
-
-      document.querySelector("ceci-app").setFirebaseObject('form-data', db);
-
-      self.showData();
 
     });
   },
@@ -243,44 +300,51 @@ Polymer("ceci-dataview", {
     window.addEventListener('storage', this.updateKeyUI.bind(this), false);
     window.addEventListener('formChange', this.updateKeyUI.bind(this), false);
 
+    // Builds out the Key UI Based on the
     this.updateKeyUI();
 
     //Show exising data
-    this.showData();
+    // this.showData();
     this.super();
 
     setTimeout(function(){
       $(self.$.keys).sortable({
+        distance : 10,
         stop : function(){
-          self.changeKeyOrder();
+          self.updateSchema();
+          self.showData();
         }
       });
     },10);
   },
-  changeKeyOrder : function(){
+  updateSchema : function(){
+    //Scrapes the Key UI and updates the _listschema
 
     var self = this;
 
-    self.keyConfig = [];
+    self.keyconfig = [];
 
     var keys = self.shadowRoot.querySelectorAll("#keys .keyConfig");
-    for(var keyConfig in keys) {
-      if(keys.hasOwnProperty(keyConfig)){
-        var name = keys[keyConfig].querySelector("select").getAttribute("key");
-        var type = keys[keyConfig].querySelector("select").value;
-        self.keyConfig.push({"name":name, "type":type});
+
+    for(var keyconfig in keys) {
+      if(keys.hasOwnProperty(keyconfig)){
+        var name = keys[keyconfig].querySelector("select").getAttribute("key");
+        var type = keys[keyconfig].querySelector("select").value;
+        var el = keys[keyconfig].querySelector(".component-template > *");
+        var att = [];
+        for (var i=0, attrs=el.attributes, l=attrs.length; i<l; i++){
+          var pair = {};
+          pair.attribute = attrs.item(i).nodeName;
+          pair.value = attrs.item(i).nodeValue;
+          if(pair.attribute != "class"){
+            att.push(pair);
+          }
+        }
+        self.keyconfig.push({"name":name, "type":type, "attributes" : att});
       }
     }
 
-    self.listschema = JSON.stringify(self.keyConfig);
-
-    document.querySelector("ceci-app").getFirebaseObject('form-data',"", function(data){
-      var db = data || {};
-      db[self.dataname + "_listschema"] = self.keyConfig;
-      document.querySelector("ceci-app").setFirebaseObject('form-data', db);
-    });
-
-    this.showData();
+    self.keyconfig = JSON.stringify(self.keyconfig);
   },
   getOrWaitForCeciApp: function(callback){
     var ceciApp = document.querySelector("ceci-app");
@@ -299,62 +363,89 @@ Polymer("ceci-dataview", {
     }
   },
   showData: function(){
+    console.log("showData");
 
     var self = this;
+
     this.getOrWaitForCeciApp(function(ceciApp){
 
-      var that = self;
+      self.tempconfig = self.keyconfig;
+
+      if(typeof self.tempconfig == "string") {
+        self.tempconfig = JSON.parse(self.tempconfig);
+      }
+
       ceciApp.getFirebaseObject('form-data', "", function(data){
-      var those = that;
-      those.storedData = data || {};
+
+      self.storedData = data || {};
 
       //Handle case where dataview is just loading and listSchema hasn't been parsed and
       //stored in keyConfig
-      if(those.keyConfig && Object.getOwnPropertyNames(those.keyConfig).length < 1){
-        those.keyConfig = those.storedData[those.dataname+"_listschema"];
-      }
+      // if(those.keyconfig && Object.getOwnPropertyNames(those.keyconfig).length < 1){
+      //   those.keyconfig = those.storedData[those.dataname+"_listschema"];
+      // }
 
       var lastData;
-      for (var i = 0; i < those.datascope.length; i++){
-        var scopeItem = those.datascope[i];
-        self.storedData = those.storedData[scopeItem["dataset"]][scopeItem["index"]];
+      for (var i = 0; i < self.datascope.length; i++){
+        var scopeItem = self.datascope[i];
+        self.storedData = self.storedData[scopeItem["dataset"]][scopeItem["index"]];
         lastData = scopeItem["dataset"];
       }
 
-      if(lastData == those.dataname){
+      if(lastData == self.dataname){
         var blam = [];
-        blam.push(those.storedData);
-        those.storedData = blam;
+        blam.push(self.storedData);
+        self.storedData = blam;
       } else {
-        those.storedData = those.storedData[those.dataname] || [];
+        self.storedData = self.storedData[self.dataname] || [];
       }
 
-      var itemList = those.shadowRoot.querySelector("#items");
+      var itemList = self.shadowRoot.querySelector("#items");
       itemList.innerHTML = "";
 
-      for(var i = 0; i < those.storedData.length; i++){
+      for(var i = 0; i < self.storedData.length; i++){
 
-        var item = those.storedData[i];
+        var item = self.storedData[i];
 
         var itemEl = document.createElement("div");
         itemEl.classList.add("dataGroup");
 
-        for(var j = 0; j < those.keyConfig.length; j++){
+        var itemFields = document.createElement("div");
+        itemFields.classList.add("item-fields");
 
-          var keyItem = those.keyConfig[j];
+        itemFields.addEventListener("click",function(e){
+          var nodeList = Array.prototype.slice.call(e.currentTarget.parentNode.parentNode.children);
+          var index = nodeList.indexOf(e.currentTarget.parentNode);
+          var sendScope = JSON.parse(JSON.stringify(self.datascope));
+          var scopeItem = {};
+          scopeItem["dataset"] = self.dataname;
+          scopeItem["index"] = index;
+          sendScope.push(scopeItem);
+          self.broadcast("tapItem", sendScope);
+        });
+
+        // Add each output component
+        for(var j = 0; j < self.tempconfig.length; j++){
+
+          var keyItem = self.tempconfig[j];
+          var el = keyItem.element;
           var key = keyItem.name;
           var displayType = keyItem.type;
+          var attributes = keyItem.attributes;
 
           if(displayType != "hide") {
             dataItem = document.createElement(displayType);
+            for(var k = 0; k < attributes.length; k++) {
+              var attrib = attributes[k];
+              dataItem.setAttribute(attrib.attribute, attrib.value);
+            }
             dataItem.setValue(item[key]);
-            dataItem.inputname = key;
             dataItem.classList.add("dataItem");
-            itemEl.appendChild(dataItem);
-
+            itemFields.appendChild(dataItem);
           }
         }
 
+        itemEl.appendChild(itemFields);
         itemList.appendChild(itemEl);
         var itemActions = document.createElement("div");
         itemActions.classList.add("item-actions");
@@ -362,13 +453,14 @@ Polymer("ceci-dataview", {
 
         if(self.showdelete == "true"){
           var deleteItem = document.createElement("div");
-          deleteItem.innerHTML = "X";
+          deleteItem.innerHTML = "Delete";
           deleteItem.classList.add("deleteItem");
           itemActions.appendChild(deleteItem);
           deleteItem.addEventListener("click",function(e){
             var nodeList = Array.prototype.slice.call(e.currentTarget.parentNode.parentNode.parentNode.children);
             var index = nodeList.indexOf(e.currentTarget.parentNode.parentNode);
-            self.deleteItem(index);
+            // console.log(self.datascope);
+            self.deleteItem(index); //But index will be relative the list? So a single item wouldn't work, we gotta do ID shit soon.
             return false;
           });
         }
@@ -381,11 +473,13 @@ Polymer("ceci-dataview", {
           editItem.addEventListener("click",function(e){
             var nodeList = Array.prototype.slice.call(e.currentTarget.parentNode.parentNode.parentNode.children);
             var index = nodeList.indexOf(e.currentTarget.parentNode.parentNode);
-            var sendScope = JSON.parse(JSON.stringify(that.datascope));
-            var scopeItem = {};
-            scopeItem["dataset"] = these.dataname;
-            scopeItem["index"] = index;
-            sendScope.push(scopeItem);
+            var sendScope = JSON.parse(JSON.stringify(self.datascope));
+            if(self.viewMode == "list") {
+              var scopeItem = {};
+              scopeItem["dataset"] = self.dataname;
+              scopeItem["index"] = index;
+              sendScope.push(scopeItem);
+            }
             self.broadcast('editItem', sendScope);
           });
         }

@@ -2,7 +2,7 @@
   display: block;
   width: 100%;
   box-sizing: border-box;
-  background: #EFEFEF;
+  background: #444;
 }
 
 :host h1 {
@@ -16,7 +16,7 @@
 :host #keys-wrapper {
   font-size: 14px;
   text-align: center;
-  padding: 10px;
+  padding: 9px 5px;
   border-bottom: solid 1px #CCC;
 /*  display: none;*/
 }
@@ -38,18 +38,41 @@
 }
 
 :host .keyConfig {
-  margin: 0 0 2px 0;
   text-align: center;
-  color: #777;
   cursor: move;
-  display: inline-block;
+  background: #efefef;
+  padding-top: 5px;
+  -webkit-border-radius: 2px;
+  margin-bottom: 10px;
+}
+
+:host .keyConfig:last-child {
+  margin-bottom: 0px;
+}
+
+:host .keyConfig .component-template {
+  background: white;
+  text-align: left;
+  margin-top: 5px;
+  border-top: solid 1px #DDD;
+}
+
+:host .keyConfig .handle,
+:host .keyConfig .delete-component {
+  display: none;
 }
 
 :host .dataGroup {
-  padding: 10px;
   border-bottom: solid 1px #DDD;
-  background: white;
+  background: -webkit-linear-gradient(#FFF,#EFEFEF);
+}
+
+:host .dataGroup .item-fields {
   padding: 10px;
+}
+
+:host .dataItem {
+    pointer-events: none;
 }
 
 :host .dataGroup .dataItem:only-child {
@@ -64,31 +87,28 @@
   display: none;
 }
 
-:host .dataGroup img {
-  max-width: 100%;
-  display: block;
-  margin: 0 auto;
-  margin-bottom: 5px;
-  box-shadow: 0 1px 3px rgba(0,0,0,.25);
-}
-
 :host .deleteItem, :host .editItem, :host .addToItem {
   display: inline-block;
-  padding: 4px 10px !important;
+  padding: 4px 0px 4px 0px !important;
+  width: 80px;
   background: #BBB;
   color: white;
-  margin: 0px 3px 0 3px;
-  margin-right: 5px;
+  margin: 0px 5px 10px 3px;
   cursor: pointer;
-/*  -webkit-border-radius: 3px;*/
+  -webkit-border-radius: 2px;
+
 }
 
 :host .editItem {
   background: #358CCE;
+  border-bottom: solid 2px #1e5e8f;
+  text-shadow: 0px -1px 0px #1e5e8f;
 }
 
 :host .deleteItem {
-  background: #b43423;
+  background: #d75342;
+  border-bottom: solid 2px #9c291a;
+  text-shadow: 0px -1px 0px #9c291a;
 }
 
 :host .addToItem {
@@ -101,10 +121,6 @@
 }
 
 :host .item-actions {
-  padding: 10px 5px 10px 5px;
-  background: #EFEFEF;
-/*  border-radius: 4px;*/
-/*  -webkit-border-radius: 4px;*/
   text-align: center;
-  margin: 5px 10px 0px 10px;
 }
+
